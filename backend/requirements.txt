@@ -1,0 +1,30 @@
+# Smart Network Guardian - Backend Requirements
+
+# Django Framework
+Django==4.2.7
+djangorestframework==3.14.0
+django-filter==23.3
+django-cors-headers==4.3.0
+
+# Database
+# psycopg2-binary==2.9.9  # PostgreSQL (optional)
+
+# Authentication
+djangorestframework-simplejwt==5.3.0
+
+# WebSocket Support
+channels==4.0.0
+channels-redis==4.1.0  # Optional: for production
+
+# API Documentation
+drf-yasg==1.21.7  # Swagger
+
+# Utils
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Security
+cryptography==41.0.5
+
+# Monitoring
+psutil==5.9.6
