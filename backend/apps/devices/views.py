@@ -98,8 +98,8 @@ class DeviceViewSet(viewsets.ModelViewSet):
     
     @action(detail=False, methods=['get'])
     def active(self, request):
-        """الحصول على الأجهزة النشطة فقط"""
-        active_devices = Device.objects.filter(status='active')
+        """الحصول على الأجهزة النشطة فقط (Case-insensitive)"""
+        active_devices = Device.objects.filter(status__in=['active', 'Active'])
         serializer = self.get_serializer(active_devices, many=True)
         return Response(serializer.data)
 
@@ -120,7 +120,7 @@ class DeviceViewSet(viewsets.ModelViewSet):
 
         stats = {
             'total_devices': Device.objects.count(),
-            'active_devices': Device.objects.filter(status='active').count(),
+            'active_devices': Device.objects.filter(status__in=['active', 'Active']).count(),
             'total_alerts': alerts.count(),
             'average_security_score': security_score,
         }

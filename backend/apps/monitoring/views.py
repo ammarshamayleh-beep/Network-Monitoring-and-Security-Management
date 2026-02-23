@@ -106,3 +106,24 @@ class MonitoringViewSet(viewsets.ViewSet):
             data = [{'name': 'No Devices', 'value': 0, 'color': '#cccccc'}]
             
         return Response(data)
+
+    @action(detail=False, methods=['post'])
+    def sync_stats(self, request):
+        """
+        مزامنة إحصائيات الشبكة من Desktop App
+        """
+        stat_data = request.data
+        try:
+            # We use stats_data format from desktop app
+            NetworkStat.objects.create(
+                total_devices=stat_data.get('total_devices', 0),
+                active_devices=stat_data.get('active_devices', 0),
+                download_speed=stat_data.get('download_speed', 0.0),
+                upload_speed=stat_data.get('upload_speed', 0.0),
+                bandwidth_usage=stat_data.get('bandwidth_usage', 0.0),
+                packet_loss=stat_data.get('packet_loss', 0.0),
+                latency=stat_data.get('latency', 0.0)
+            )
+            return Response({'success': True})
+        except Exception as e:
+            return Response({'success': False, 'error': str(e)}, status=400)

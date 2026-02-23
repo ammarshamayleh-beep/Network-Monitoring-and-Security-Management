@@ -37,7 +37,9 @@ class SmartNetworkGuardian:
         self.root.geometry("1400x850")
         
         # Initialize components
-        self.db = DatabaseManager()
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        db_path = os.path.join(base_dir, 'network_guardian.db')
+        self.db = DatabaseManager(db_path=db_path)
         self.scanner = NetworkScanner()
         self.security = SecurityAnalyzer()
         
@@ -933,6 +935,10 @@ class SmartNetworkGuardian:
                     
                     self.db.save_device(device)
                 
+                # Auto sync if connected
+                if self.api_connected:
+                    self.sync_with_backend()
+                
                 # Wait for next scan
                 interval = int(self.scan_interval.get()) * 60
                 time.sleep(interval)
@@ -1139,6 +1145,10 @@ class SmartNetworkGuardian:
                         'latency': 0.0 # Placeholder
                     }
                     self.db.save_network_stats(stats_data)
+                    
+                    # Sync to backend
+                    if self.api_connected:
+                        self.api.sync_network_stats(stats_data)
                 except Exception as e:
                     print(f"Error saving stats: {e}")
     

@@ -85,3 +85,19 @@ class SmartGuardianAPI:
                 
         except Exception as e:
             return False, f"Alert error: {str(e)}"
+
+    def sync_network_stats(self, stats):
+        """Sync network statistics (traffic, speeds, counts)"""
+        if not self.token:
+            return False, "Not authenticated"
+            
+        try:
+            url = f"{self.base_url}/monitoring/sync_stats/"
+            response = requests.post(url, json=stats, headers=self.headers)
+            
+            if response.status_code == 200:
+                return True, "Stats synced"
+            else:
+                return False, f"Stats failed: {response.text}"
+        except Exception as e:
+            return False, f"Stats error: {str(e)}"
