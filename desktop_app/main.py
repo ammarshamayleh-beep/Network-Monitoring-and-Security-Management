@@ -22,6 +22,8 @@ import os
 import psutil
 import csv
 from tkinter import filedialog
+import subprocess
+import sys
 
 # استيراد الوحدات المخصصة
 from scanner import NetworkScanner
@@ -46,10 +48,14 @@ class SmartNetworkGuardian:
         # API Configuration (Django Backend)
         self.api = SmartGuardianAPI()
         self.api_connected = False
+        self.backend_process = None
         
         # Results storage
         self.current_scan_results = {}
         self.monitoring_active = False
+        
+        # Auto-start backend if needed
+        self.auto_start_backend()
         
         # Setup UI
         self.center_window()
@@ -1245,10 +1251,66 @@ class SmartNetworkGuardian:
         messagebox.showinfo("Settings", "Settings saved successfully!")
         self.update_status("Settings saved")
     
+    def auto_start_backend(self):
+        """تشغيل الـ Backend تلقائياً إذا لم يكن يعمل"""
+        def _start_backend_thread():
+            try:
+                # تحقق أولاً إذا كان يعمل
+                response = requests.get("http://localhost:8000/api/health/", timeout=2)
+                if response.status_code == 200:
+                    self.update_status("Backend is already running.")
+                    return
+            except:
+                pass
+
+            self.update_status("Starting backend server...")
+            
+            # تحديد المسارات
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            backend_dir = os.path.join(base_dir, 'backend')
+            manage_py = os.path.join(backend_dir, 'manage.py')
+            
+            if os.path.exists(manage_py):
+                try:
+                    # إعدادات بدء العملية على ويندوز لإخفاء نافذة الـ cmd السوداء
+                    startupinfo = None
+                    if os.name == 'nt':
+                        startupinfo = subprocess.STARTUPINFO()
+                        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                    
+                    self.backend_process = subprocess.Popen(
+                        [sys.executable, manage_py, "runserver", "8000", "--noreload"],
+                        cwd=backend_dir,
+                        startupinfo=startupinfo,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE,
+                        text=True
+                    )
+                    
+                    # ننتظر قليلاً ليقلع السيرفر
+                    time.sleep(3)
+                    self.update_status("Backend server started automatically.")
+                    # محاولة الاتصال التلقائي بعد التشغيل
+                    self.root.after(1000, self.test_backend_connection)
+                except Exception as e:
+                    self.update_status(f"Failed to auto-start backend: {e}")
+            else:
+                self.update_status("Manage.py not found in backend directory.")
+
+        threading.Thread(target=_start_backend_thread, daemon=True).start()
+
     def safe_exit(self):
         """إغلاق آمن للتطبيق"""
         if messagebox.askyesno("Exit", "Are you sure you want to exit?"):
             self.monitoring_active = False
+            
+            # إغلاق الـ Backend إذا قمنا بتشغيله
+            if self.backend_process:
+                try:
+                    self.backend_process.terminate()
+                except:
+                    pass
+                    
             self.db.close()
             self.root.quit()
 
