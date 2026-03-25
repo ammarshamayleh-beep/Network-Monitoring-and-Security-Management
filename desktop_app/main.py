@@ -181,6 +181,14 @@ class SmartNetworkGuardian:
         self.update_status(f"Connected to backend as {username}")
         # Auto sync after login
         self.sync_with_backend()
+    
+    def disconnect_from_backend(self):
+        """قطع الاتصال بالسيرفر"""
+        self.api_connected = False
+        self.api.token = None
+        self.api.headers.pop('Authorization', None)
+        self.backend_status.config(text="🔴 Disconnected", foreground=self.colors['danger'])
+        self.update_status("Disconnected from backend")
 
     def create_ui(self):
         """إنشاء واجهة المستخدم"""
@@ -234,9 +242,15 @@ class SmartNetworkGuardian:
             style='Data.TLabel')
         self.backend_status.pack(side=tk.LEFT, padx=5)
         
-        ttk.Button(status_frame, text="Connect", 
+        self.connect_btn = ttk.Button(status_frame, text="Connect", 
                    command=self.connect_to_backend,
-                   style='Accent.TButton', width=10).pack(side=tk.LEFT, padx=5)
+                   style='Accent.TButton', width=10)
+        self.connect_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.disconnect_btn = ttk.Button(status_frame, text="Disconnect", 
+                   command=self.disconnect_from_backend,
+                   style='Accent.TButton', width=10)
+        self.disconnect_btn.pack(side=tk.LEFT, padx=5)
     
     
     def create_sidebar(self, parent):
