@@ -1251,6 +1251,21 @@ class SmartNetworkGuardian:
         messagebox.showinfo("Settings", "Settings saved successfully!")
         self.update_status("Settings saved")
     
+    def _find_venv_python(self):
+        """Find the .venv Python interpreter that has Django installed"""
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        
+        if os.name == 'nt':
+            venv_python = os.path.join(base_dir, '.venv', 'Scripts', 'python.exe')
+        else:
+            venv_python = os.path.join(base_dir, '.venv', 'bin', 'python')
+        
+        if os.path.exists(venv_python):
+            return venv_python
+        
+        # Fallback to sys.executable
+        return sys.executable
+
     def auto_start_backend(self):
         """تشغيل الـ Backend تلقائياً إذا لم يكن يعمل"""
         def _start_backend_thread():
@@ -1269,6 +1284,7 @@ class SmartNetworkGuardian:
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             backend_dir = os.path.join(base_dir, 'backend')
             manage_py = os.path.join(backend_dir, 'manage.py')
+            python_exe = self._find_venv_python()
             
             if os.path.exists(manage_py):
                 try:
@@ -1279,7 +1295,7 @@ class SmartNetworkGuardian:
                         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
                     
                     self.backend_process = subprocess.Popen(
-                        [sys.executable, manage_py, "runserver", "8000", "--noreload"],
+                        [python_exe, manage_py, "runserver", "8000", "--noreload"],
                         cwd=backend_dir,
                         startupinfo=startupinfo,
                         stdout=subprocess.PIPE,
@@ -1287,9 +1303,23 @@ class SmartNetworkGuardian:
                         text=True
                     )
                     
-                    # ننتظر قليلاً ليقلع السيرفر
-                    time.sleep(3)
-                    self.update_status("Backend server started automatically.")
+                    # Wait for the server to actually become ready (up to 10 seconds)
+                    server_ready = False
+                    for attempt in range(10):
+                        time.sleep(1)
+                        try:
+                            resp = requests.get("http://localhost:8000/api/health/", timeout=2)
+                            if resp.status_code == 200:
+                                server_ready = True
+                                break
+                        except:
+                            pass
+                    
+                    if server_ready:
+                        self.update_status("Backend server started automatically.")
+                    else:
+                        self.update_status("Backend started but not responding yet...")
+                    
                     # محاولة الاتصال التلقائي بعد التشغيل
                     self.root.after(1000, self.test_backend_connection)
                 except Exception as e:
